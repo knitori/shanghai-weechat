@@ -1,0 +1,4 @@
+# python2 utilities used by weechat plugin.
+
+pytz
+python-dateutil

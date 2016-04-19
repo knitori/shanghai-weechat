@@ -1,0 +1,4 @@
+# python 3 requirements used by utilities in bin/ folder
+
+git+https://github.com/knitori/urlfetcher
+lxml
