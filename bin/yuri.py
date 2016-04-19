@@ -7,12 +7,19 @@ import json
 from functools import partial
 bs4.BeautifulSoup = partial(bs4.BeautifulSoup, features='lxml')
 
+headers = {}
+headers['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.87 Safari/537.36'
+headers['Pragma'] = 'no-cache'
+headers['Cache-Control'] = 'no-cache'
+headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+headers['Accept-Encoding'] = 'gzip, deflate, sdch'
+
 
 def main():
     base_url = 'http://dynasty-scans.com/'
 
     while True:
-        r = requests.get(base_url)
+        r = requests.get(base_url, headers=headers)
         soup = bs4.BeautifulSoup(r.text)
         header = soup.find('h4', text='Random Chapter')
         anchor = header.next_sibling.next_sibling
