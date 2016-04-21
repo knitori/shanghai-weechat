@@ -22,7 +22,7 @@ import weechat_utils
 from weechat_utils import hook_signal, hook_irc_command, color
 from weechat_utils import infolist_get, hook_timer, hook_process
 
-from other_utils import to_seconds, seconds_to_string,\
+from other_utils import to_seconds, seconds_to_string, parse_timestamp, \
     simple_tobytes, try_decode
 
 random = random.SystemRandom()
@@ -165,7 +165,8 @@ def cmd_timer_callback(userdata):
         if int_delay > 5:
             delay = ' with ~{} seconds delay because of script reloading'.format(int_delay)
     userdata['ctx'].command('/say {}, I remind you of: {} ({} ago{})'.format(
-        userdata['caller'], userdata['message'],
+        userdata['caller'],
+        userdata['message'] or "nothing",
         seconds_to_string(userdata['time_seconds']), delay))
 
 
@@ -190,27 +191,42 @@ for timer in timer_data['timers']:
                  u'{}* Loaded timer {tid} for {ctx.server}@{ctx.channel}'
                  .format(weechat.color("yellow,black"), **_ud).encode('utf-8'))
 
+MAX_TIMER_LENGTH = 60 * 60 * 24 * 7 * 4  # in seconds
+
 
 @hook_irc_command('+timer')
 def timer_hook(ctx, pline, userdata):
     caller = pline.prefix.nick
-    args = pline.trailing.split(None, 2)
-    usage = '/notice {} Invalid syntax: +timer <[ digits "h" ]' \
-            '[ digits "m" ][ digits "s" ]> <message>'.format(caller)
-    
-    if len(args) < 3:
+    usage = ('/notice {} Invalid syntax: +timer <[ digits "d" ][ digits "h" ]'
+             '[ digits "m" ][ digits "s" ]> [<message>] || '
+             '+timer "<timestamp>" [<message>]'
+             .format(caller))
+    _, _, arg_string = pline.trailing.partition(" ")
+
+    # allow first argument to be quoted
+    # while everything following becomes "the message"
+    sh_args = shlex.split(arg_string)
+    if not sh_args:
         ctx.command(usage)
         return
+    time_string = sh_args[0]
+    message = arg_string[len(time_string):].strip()
 
-    _, time_string, message = args
+    # interpret timestamp
     time_seconds = to_seconds(time_string)
     if not time_seconds:
-        ctx.command(usage)
+        timestamp = parse_timestamp(time_string)
+        if not timestamp:
+            ctx.command(usage)
+            return
+        time_seconds = int((timestamp - datetime.now()).seconds)
+
+    if time_seconds < 0:
+        ctx.command('/notice Timestamp is in past')
         return
-    
-    if time_seconds > 2147483:
-        ctx.command('/notice {} Too large, maximum is 2147483 seconds or {}'
-                    .format(caller, seconds_to_string(2147483)))
+    elif time_seconds > MAX_TIMER_LENGTH:
+        ctx.command('/notice {} Too large, maximum is {} seconds or {}'
+                    .format(caller, MAX_TIMER_LENGTH, seconds_to_string(MAX_TIMER_LENGTH)))
         return
 
     _userdata = dict(
@@ -393,11 +409,11 @@ def nyaa(ctx, pline, ud):
     if len(args) == 1:
         mylist = infolist_get(
             "irc_nick", "{},{}".format(ctx.server, ctx.channel))
-        nicklist = list(set(user.name for user in mylist) -
-                        set([ctx.nickname]))
+        nicklist = [user.name for user in mylist if ctx.nickname != user.name]
         nick = random.choice(nicklist)
-        while nick.lower() in last_nyaa_users:
-            nick = random.choice(nicklist)
+        if len(nicklist) > len(last_nyaa_users):
+            while nick.lower() in last_nyaa_users:
+                nick = random.choice(nicklist)
         last_nyaa_users.append(nick.lower())
         last_nyaa_users = last_nyaa_users[-min(5, len(nicklist)):]
 
