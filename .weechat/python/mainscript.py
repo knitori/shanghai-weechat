@@ -213,14 +213,13 @@ def timer_hook(ctx, pline, userdata):
     message = arg_string[len(time_string):].strip()
 
     # interpret timestamp
-    timestamp = parse_timestamp(time_string)
-    if timestamp:
-        time_seconds = int(timestamp - time.time())
-    else:
-        time_seconds = to_seconds(time_string)
+    time_seconds = to_seconds(time_string)
     if not time_seconds:
-        ctx.command(usage)
-        return
+        timestamp = parse_timestamp(time_string)
+        if not timestamp:
+            ctx.command(usage)
+            return
+        time_seconds = int((timestamp - datetime.now()).seconds)
 
     if time_seconds < 0:
         ctx.command('/notice Timestamp is in past')
