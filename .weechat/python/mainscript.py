@@ -209,7 +209,7 @@ def timer_hook(ctx, pline, userdata):
     if not sh_args:
         ctx.command(usage)
         return
-    time_string = sh_args[1]
+    time_string = sh_args[0]
     message = arg_string[len(time_string):].strip()
 
     # interpret timestamp
