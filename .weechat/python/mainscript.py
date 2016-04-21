@@ -165,7 +165,8 @@ def cmd_timer_callback(userdata):
         if int_delay > 5:
             delay = ' with ~{} seconds delay because of script reloading'.format(int_delay)
     userdata['ctx'].command('/say {}, I remind you of: {} ({} ago{})'.format(
-        userdata['caller'], userdata['message'],
+        userdata['caller'],
+        userdata['message'] or "nothing",
         seconds_to_string(userdata['time_seconds']), delay))
 
 
@@ -198,13 +199,17 @@ def timer_hook(ctx, pline, userdata):
     caller = pline.prefix.nick
     args = pline.trailing.split(None, 2)
     usage = '/notice {} Invalid syntax: +timer <[ digits "h" ]' \
-            '[ digits "m" ][ digits "s" ]> <message>'.format(caller)
+            '[ digits "m" ][ digits "s" ]> [<message>]'.format(caller)
 
-    if len(args) < 3:
+    if len(args) < 2:
         ctx.command(usage)
         return
+    elif len(args) == 2:
+        _, time_string = args
+        message = None
+    else:
+        _, time_string, message = args
 
-    _, time_string, message = args
     time_seconds = to_seconds(time_string)
     if not time_seconds:
         ctx.command(usage)
