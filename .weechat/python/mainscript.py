@@ -22,7 +22,7 @@ import weechat_utils
 from weechat_utils import hook_signal, hook_irc_command, color
 from weechat_utils import infolist_get, hook_timer, hook_process
 
-from other_utils import to_seconds, seconds_to_string,\
+from other_utils import to_seconds, seconds_to_string, parse_timestamp, \
     simple_tobytes, try_decode
 
 random = random.SystemRandom()
@@ -197,25 +197,35 @@ MAX_TIMER_LENGTH = 60 * 60 * 24 * 7 * 4  # in seconds
 @hook_irc_command('+timer')
 def timer_hook(ctx, pline, userdata):
     caller = pline.prefix.nick
-    args = pline.trailing.split(None, 2)
-    usage = '/notice {} Invalid syntax: +timer <[ digits "d" ][ digits "h" ]' \
-            '[ digits "m" ][ digits "s" ]> [<message>]'.format(caller)
+    usage = ('/notice {} Invalid syntax: +timer <[ digits "d" ][ digits "h" ]'
+             '[ digits "m" ][ digits "s" ]> [<message>] || '
+             '+timer "<timestamp>" [<message>]'
+             .format(caller))
+    _, _, arg_string = pline.trailing.partition(" ")
 
-    if len(args) < 2:
+    # allow first argument to be quoted
+    # while everything following becomes "the message"
+    sh_args = shlex.split(arg_string)
+    if not sh_args:
         ctx.command(usage)
         return
-    elif len(args) == 2:
-        _, time_string = args
-        message = None
-    else:
-        _, time_string, message = args
+    time_string = sh_args[1]
+    message = arg_string[len(time_string):].strip()
 
-    time_seconds = to_seconds(time_string)
+    # interpret timestamp
+    timestamp = parse_timestamp(time_string)
+    if timestamp:
+        time_seconds = int(timestamp - time.time())
+    else:
+        time_seconds = to_seconds(time_string)
     if not time_seconds:
         ctx.command(usage)
         return
 
-    if time_seconds > MAX_TIMER_LENGTH:
+    if time_seconds < 0:
+        ctx.command('/notice Timestamp is in past')
+        return
+    elif time_seconds > MAX_TIMER_LENGTH:
         ctx.command('/notice {} Too large, maximum is {} seconds or {}'
                     .format(caller, MAX_TIMER_LENGTH, seconds_to_string(MAX_TIMER_LENGTH)))
         return
