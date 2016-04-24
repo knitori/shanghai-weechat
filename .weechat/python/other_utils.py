@@ -23,7 +23,6 @@ def try_decode(text, encoding='utf-8', fallback='latin1'):
 
 def seconds_to_string(seconds):
     parts = [
-        (604800, 'w'),
         (86400, 'd'),
         (3600, 'h'),
         (60, 'm'),

@@ -205,12 +205,13 @@ def timer_hook(ctx, pline, userdata):
 
     # allow first argument to be quoted
     # while everything following becomes "the message"
-    sh_args = shlex.split(arg_string)
-    if not sh_args:
+    pattern = re.compile(r'''^(?P<q>["']?)(?P<time_string>[^"']+?)(?P=q)\s+(?P<message>.*)$''')
+    match = pattern.match(arg_string.strip())
+    if match is None:
         ctx.command(usage)
         return
-    time_string = sh_args[0]
-    message = arg_string[len(time_string):].strip()
+    time_string = match.group('time_string').strip()
+    message = match.group('message').strip()
 
     # interpret timestamp
     time_seconds = to_seconds(time_string)
@@ -219,7 +220,8 @@ def timer_hook(ctx, pline, userdata):
         if not timestamp:
             ctx.command(usage)
             return
-        time_seconds = int((timestamp - datetime.now()).seconds)
+        delta = timestamp - datetime.now()
+        time_seconds = int(delta.seconds + 86400*delta.days)
 
     if time_seconds < 0:
         ctx.command('/notice Timestamp is in past')
