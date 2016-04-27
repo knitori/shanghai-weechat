@@ -164,10 +164,16 @@ def cmd_timer_callback(userdata):
         int_delay = abs(int(time.time() - userdata['_when']))
         if int_delay > 5:
             delay = ' with ~{} seconds delay because of script reloading'.format(int_delay)
-    userdata['ctx'].command('/say {}, I remind you of: {} ({} ago{})'.format(
-        userdata['caller'],
-        userdata['message'] or "nothing",
-        seconds_to_string(userdata['time_seconds']), delay))
+    if userdata['message']:
+        output_message = '/say {}, I remind you of: {} ({} ago{})'.format(
+            userdata['caller'],
+            userdata['message'],
+            seconds_to_string(userdata['time_seconds']), delay)
+    else:
+        output_message = '/say {}, I am supposed to remind you of something. ({} ago{})'.format(
+            userdata['caller'],
+            seconds_to_string(userdata['time_seconds']), delay)
+    userdata['ctx'].command(output_message)
 
 
 # loading existing timers from file
@@ -205,13 +211,16 @@ def timer_hook(ctx, pline, userdata):
 
     # allow first argument to be quoted
     # while everything following becomes "the message"
-    pattern = re.compile(r'''^(?P<q>["']?)(?P<time_string>[^"']+?)(?P=q)\s+(?P<message>.*)$''')
+    pattern = re.compile(r'''^(?P<q>["']?)(?P<time_string>[^"']+?)(?P=q)(\s+(?P<message>.*))?$''')
     match = pattern.match(arg_string.strip())
     if match is None:
         ctx.command(usage)
         return
     time_string = match.group('time_string').strip()
-    message = match.group('message').strip()
+    message = match.group('message')
+    if message is None or not message.strip():
+        message = ''
+    message = message.strip()
 
     # interpret timestamp
     time_seconds = to_seconds(time_string)
