@@ -96,6 +96,7 @@ url_fetch_data = {
         re.compile(r'Lyekka!.*@.*$', re.I),
         re.compile(r'Peaches!.*@.*\.cloud-ips\.com$', re.I),
         re.compile(r'\|\^-\^\|!.*@.*$', re.I),
+        re.compile(r'^momiji!.*@.*$', re.I),
     ]
 }
 
