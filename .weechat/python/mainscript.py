@@ -103,6 +103,7 @@ url_fetch_data = {
 google_data = {'locked_until': 0}
 yuri_data = {'locked_until': 0}
 jisho_data = {'locked_until': 0}
+vision_data = {'locked_until': 0}
 
 timer_filename = os.path.expanduser('~/.weechat/python/data/_timerdata.txt')
 
@@ -328,6 +329,28 @@ def yuri_hook(ctx, pline, userdata):
 
     userdata['locked_until'] = time.time() + 5
     hook_process(['yuri.py'], _yuri_process_cb)
+
+
+@hook_irc_command('+vision', userdata=vision_data)
+def vision_hook(ctx, pline, userdata):
+    if time.time() < userdata['locked_until']:
+        return
+
+    def _vision_process_cb(returncode, stdout, stderr, _userdata):
+        if returncode == 0:
+            stdout = stdout.strip()
+            if not stdout:
+                return
+            ctx.command('/say {}'.format(stdout))
+        elif returncode in (1, 2, 3, 4):
+            ctx.command('/say Error: {}'.format(stdout))
+
+    args = pline.trailing.split()
+    args.pop(0)
+    if args:
+        userdata['locked_until'] = time.time() + 5
+        param = ' '.join(args)
+        hook_process(['vision.py', param], _vision_process_cb)
 
 
 @hook_irc_command('+google', userdata=google_data)
@@ -558,7 +581,7 @@ def process_cb(returncode, stdout, stderr, url_fetch_data):
         url_fetch_data['url_title_cache'][url_fetch_data['url']] = \
             (time.time() + url_fetch_data['max_cache_time'], info_string)
         if info_string:
-            ctx.command('/say \x02url_info |\x02 {}'.format(info_string))
+            ctx.command('/say {}'.format(info_string))
     hook_timer(2, url_requests_unlock, url_fetch_data)
 
 
@@ -624,7 +647,7 @@ def privmsg(ctx, pline, signal, url_fetch_data):
     url_fetch_data['proc_errput'] = ''
     url_fetch_data['url'] = url
     url_fetch_data['priv_ctx'] = ctx
-    hook_process(['fetch-url-title.py', url], process_cb,
+    hook_process(['fetch-url-title', url], process_cb,
                  userdata=url_fetch_data)
 
 quote_db_filename = os.path.expanduser('~/.weechat/python/data/_quotes.db')
