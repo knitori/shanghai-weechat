@@ -353,7 +353,7 @@ def vision_hook(ctx, pline, userdata):
         hook_process(['vision.py', param], _vision_process_cb)
 
 
-@hook_irc_command('+google', userdata=google_data)
+@hook_irc_command(re.compile('^\+g.*$'), userdata=google_data)
 def google_hook(ctx, pline, userdata):
     if time.time() < userdata['locked_until']:
         return

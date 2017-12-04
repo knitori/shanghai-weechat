@@ -5,6 +5,7 @@ from collections import namedtuple
 import pipes
 import functools
 import random
+import re
 random = random.SystemRandom()
 
 import weechat
@@ -118,9 +119,15 @@ class hook_irc_command(hook_signal):
         if not isinstance(self.signal, list):
             signals = [self.signal]
 
+        retype = type(re.compile('^$'))
+
         for cmd_signal in signals:
-            if tr_parts and tr_parts[0].lower() == cmd_signal.lower():
-                break
+            if isinstance(cmd_signal, retype):
+                if tr_parts and cmd_signal.search(tr_parts[0]):
+                    break
+            else:
+                if tr_parts and tr_parts[0].lower() == cmd_signal.lower():
+                    break
         else:
             return weechat.WEECHAT_RC_OK  # ignore
 
